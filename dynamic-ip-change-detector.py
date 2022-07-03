@@ -1,9 +1,12 @@
 import urllib.request
 import time
 import json
+import os
 from discord_webhook import DiscordWebhook, DiscordEmbed
 
-discord_webhook = "" # This variable is where you define your discord channel webhook
+discord_webhook = os.environ['DISCORD_WEBHOOK']
+
+#discord_webhook = "" You can use this if you don't want to use Docker ENV
 
 def webhook(content, url):
     webhook = DiscordWebhook(url=url)
