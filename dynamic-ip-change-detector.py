@@ -18,7 +18,7 @@ def webhook(content, url):
 currentip = []
 
 while True:
-    endpoint = 'https://wtfismyip.com/text' # Do not change this variable unless you know what you're doing
+    endpoint = 'https://ip.edge9.workers.dev/' # Do not change this variable unless you know what you're doing
     data = urllib.request.urlopen(endpoint).read()
     ip = data.decode().strip()
 
