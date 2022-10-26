@@ -3,15 +3,34 @@ import json
 import os
 from discord_webhook import DiscordWebhook, DiscordEmbed
 from urllib.request import Request, urlopen
-
+import CloudFlare
+from dotenv import load_dotenv
+load_dotenv(dotenv_path='config.env')
 discord_webhook = os.environ['DISCORD_WEBHOOK']
 
 #discord_webhook = "" You can use this if you don't want to use Docker ENV
+
+endpoint = "https://api.cloudflare.com/client/v4/"
+CLOUDFLARE_API_KEY = os.environ['CLOUDFLARE_API_KEY']
 
 def webhook(content, url):
     webhook = DiscordWebhook(url=url)
 
     embed = DiscordEmbed(title='New IP detected', description='{}'.format(content), color='0xff0000')
+    webhook.add_embed(embed)
+    response = webhook.execute()
+
+def webhook_DDNS(content, url):
+    webhook = DiscordWebhook(url=url)
+
+    embed = DiscordEmbed(title='CloudFlare DDNS Updated', description='{}'.format(content), color='0xff0000')
+    webhook.add_embed(embed)
+    response = webhook.execute()
+
+def webhook_ERROR(content, url):
+    webhook = DiscordWebhook(url=url)
+
+    embed = DiscordEmbed(title='Error Encountered', description='{}'.format(content), color='0xff0000')
     webhook.add_embed(embed)
     response = webhook.execute()
 
@@ -34,8 +53,40 @@ while True:
     if ip in currentip:
         pass
     else:
+        oldIP = currentip
+        newIP = ip
         currentip = []
         currentip.append(ip)
         webhook(f"**New IP**: `{ip}`" , discord_webhook)
+        print("Starting CF DDNS Update")
+        cf = CloudFlare.CloudFlare()
+        zones = cf.zones.get()
+        for zone in zones:
+            zone_id = zone['id']
+            zone_name = zone['name']
+            try:
+                dns_records = cf.zones.dns_records.get(zone_id)
+                for dns_records in dns_records:
+                    if dns_records['type'] == "A":
+                        if dns_records['content'] == oldIP:
+                            print(
+                                dns_records['name'] + " " + dns_records['type'] + " " + dns_records['content'])
+                            data_record = {
+                                'name': dns_records['name'],
+                                'type': dns_records['type'],
+                                'content': newIP,
+                                'proxied': dns_records['proxied']
+                            }
+                            try: 
+                                cf.zones.dns_records.put(
+                                    zone_id, dns_records['id'], data=data_record)
+                                webhook_DDNS(f"**Updated**: `{dns_records['name']}`" , discord_webhook)
 
-    time.sleep(60) # Waits for 60 seconds till it checks if the IP was changed again. Respect rate limiting and keep this number as high as possible.
+                            except CloudFlare.exceptions.CloudFlareAPIError as e:
+                                #send failure message to discord
+                                webhook_ERROR(f"`{e, e}`" , discord_webhook)
+
+            except CloudFlare.exceptions.CloudFlareAPIError as e:
+                exit('/zones/dns_records.get %d %s - api call failed' % (e, e))
+
+    time.sleep(60) # Waits for 60 seconds until it checks if the IP was changed again. Respect rate limiting and keep this number as high as possible.
