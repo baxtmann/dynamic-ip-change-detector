@@ -47,13 +47,18 @@ while True:
     request = Request(endpoint, headers=hdr)
     data = urlopen(request).read()
     ip = data.decode().strip()
-
+    count = 0
     print(ip)
 
     if ip in currentip:
         pass
     else:
         oldIP = currentip
+        #this prevents the script from wiping dns records when it runs for the first time (ensures old ip is not empty, if it is the script will try and change all ips)
+        if count == 0: 
+            oldIP = ip
+            count = count + 1
+        
         newIP = ip
         currentip = []
         currentip.append(ip)
@@ -70,7 +75,7 @@ while True:
                     if dns_records['type'] == "A":
                         if dns_records['content'] == oldIP:
                             print(
-                                dns_records['name'] + " " + dns_records['type'] + " " + dns_records['content'])
+                                "OLD: " + dns_records['name'] + " " + dns_records['type'] + " " + dns_records['content'])
                             data_record = {
                                 'name': dns_records['name'],
                                 'type': dns_records['type'],
@@ -81,7 +86,8 @@ while True:
                                 cf.zones.dns_records.put(
                                     zone_id, dns_records['id'], data=data_record)
                                 webhook_DDNS(f"**Updated**: `{dns_records['name']}`" , discord_webhook)
-
+                                print(
+                                "NEW: " + dns_records['name'] + " " + dns_records['type'] + " " + data_record['content'])
                             except CloudFlare.exceptions.CloudFlareAPIError as e:
                                 #send failure message to discord
                                 webhook_ERROR(f"`{e, e}`" , discord_webhook)
