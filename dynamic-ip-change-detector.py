@@ -65,12 +65,12 @@ while True:
         webhook(f"**New IP**: `{ip}`" , discord_webhook)
         print("Starting CF DDNS Update")
         cf = CloudFlare.CloudFlare()
-        zones = cf.zones.get()
+        zones = cf.zones.get(params = {'per_page':200})
         for zone in zones:
             zone_id = zone['id']
             zone_name = zone['name']
             try:
-                dns_records = cf.zones.dns_records.get(zone_id)
+                dns_records = cf.zones.dns_records.get(zone_id, params = {'per_page':200})
                 for dns_records in dns_records:
                     if dns_records['type'] == "A":
                         if dns_records['content'] == oldIP:
