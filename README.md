@@ -9,6 +9,8 @@ A script that detects if your public IP was changed, and if so sends it to a dis
 - Dockerized The Script
   
 - Added support to script for reading from system ENV Variables
+
+- Added Cloudflare DDNS support
   
 
 ### Docker Image
