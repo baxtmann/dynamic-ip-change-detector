@@ -1,4 +1,4 @@
-dynamic-ip-change-detector
+#dynamic-ip-change-detector
 
 A Fork of: [Ethical Punk's Dynamic IP Change Detector](https://github.com/ethicalpunk/dynamic-ip-change-detector)
 
