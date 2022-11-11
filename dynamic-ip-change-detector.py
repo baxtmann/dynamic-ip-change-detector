@@ -6,6 +6,8 @@ from urllib.request import Request, urlopen
 import CloudFlare
 from dotenv import load_dotenv
 import redis
+import sys
+import ipaddress
 load_dotenv(dotenv_path='config.env')
 discord_webhook = os.environ['DISCORD_WEBHOOK']
 
@@ -61,11 +63,13 @@ while True:
     count = 0
     print(ip)
     # init redis connection
-    r = redis.Redis(host=REDIS_HOST, port=6379, charset="UTF-8", decode_responses=True, db=0)
+    r = redis.Redis(host=REDIS_HOST, port=6379,
+                    charset="UTF-8", decode_responses=True, db=0)
     redisIPOld = r.get('ip')
     print("RedisIPOld: " + str(redisIPOld))
-    if ip in currentip:
-        if ip == redisIPOld: 
+
+    if ip == redisIPOld:
+        if ip in currentip:
             pass
     else:
         # this prevents the script from wiping dns records when it runs for the first time (ensures old ip is not empty, if it is the script will try and change all ips)
@@ -110,8 +114,17 @@ while True:
 
                 except CloudFlare.exceptions.CloudFlareAPIError as e:
                     exit('/zones/dns_records.get %d %s - api call failed' % (e, e))
+            # getting IPRedis ready for redis. We will first check to make sure it's a valid IP address
+            try:
+                ipaddress.ip_address(ip)
+                print("Valid IP Address")
+                IPRedis = ip
+            except ValueError:
+                print("Invalid IP Address, we will not save this to redis. Instead we will save 1.1.1.1")
+                #we do this so that next time the script runs, it'll be forced to update the IP address. If it is still invalid when it tries again, CF will reject it if it's not a valid IP. 
+                IPRedis = "1.1.1.1"
             # here we save the current IP to redis, for the next check.
-            r.set('ip', ip)
+            r.set('ip', IPRedis)
             print("IP Saved to Redis!")
     # Waits for 60 seconds until it checks if the IP was changed again. Respect rate limiting and keep this number as high as possible.
     time.sleep(60)
