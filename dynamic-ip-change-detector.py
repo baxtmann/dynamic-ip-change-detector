@@ -65,7 +65,8 @@ while True:
     redisIPOld = r.get('ip')
     print("RedisIPOld: " + str(redisIPOld))
     if ip in currentip:
-        pass
+        if ip == redisIPOld: 
+            pass
     else:
         # this prevents the script from wiping dns records when it runs for the first time (ensures old ip is not empty, if it is the script will try and change all ips)
         if count == 0:
