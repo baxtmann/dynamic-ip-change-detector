@@ -1,3 +1,4 @@
 discord_webhook
 CloudFlare
 python-dotenv
+redis

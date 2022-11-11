@@ -38,3 +38,6 @@ The script will also then send a webhook message notifying you that the domains 
 If you have more than 20 domains in Cloudflare, you'll need to increase the amount of domains the script pulls, but updating the LIMIT environment variable.
 
 To see a list of all supported ENV Vars, you can refer to config.env.example
+
+### Redis Implementation
+To help with bugs related to loss of internet connection, I've added Redis support so that the old IP can persist even if the script crashes, stops etc. All you need to do is install the base redis server, and store the IP as an env var called 'REDIS_HOST' and the script will take it from there. (note that it uses db 0 by default. ) I just use the default redis docker iamge which can be found here: https://hub.docker.com/_/redis

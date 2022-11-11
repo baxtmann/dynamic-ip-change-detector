@@ -5,6 +5,7 @@ from discord_webhook import DiscordWebhook, DiscordEmbed
 from urllib.request import Request, urlopen
 import CloudFlare
 from dotenv import load_dotenv
+import redis
 load_dotenv(dotenv_path='config.env')
 discord_webhook = os.environ['DISCORD_WEBHOOK']
 
@@ -13,6 +14,8 @@ discord_webhook = os.environ['DISCORD_WEBHOOK']
 endpoint = "https://api.cloudflare.com/client/v4/"
 CLOUDFLARE_API_KEY = os.environ['CLOUDFLARE_API_KEY']
 limit = os.environ['LIMIT']
+REDIS_HOST = os.environ['REDIS_HOST']
+
 
 def webhook(content, url):
     webhook = DiscordWebhook(url=url)
@@ -57,16 +60,17 @@ while True:
     ip = data.decode().strip()
     count = 0
     print(ip)
-
+    # init redis connection
+    r = redis.Redis(host=REDIS_HOST, port=6379, charset="UTF-8", decode_responses=True, db=0)
+    redisIPOld = r.get('ip')
+    print("RedisIPOld: " + str(redisIPOld))
     if ip in currentip:
         pass
     else:
-        oldIP = currentip
         # this prevents the script from wiping dns records when it runs for the first time (ensures old ip is not empty, if it is the script will try and change all ips)
         if count == 0:
             oldIP = ip
             count = count + 1
-
         newIP = ip
         currentip = []
         currentip.append(ip)
@@ -83,7 +87,7 @@ while True:
                         zone_id, params={'per_page': limit})
                     for dns_records in dns_records:
                         if dns_records['type'] == "A":
-                            if dns_records['content'] == oldIP:
+                            if dns_records['content'] == redisIPOld:
                                 print(
                                     "OLD: " + dns_records['name'] + " " + dns_records['type'] + " " + dns_records['content'])
                                 data_record = {
@@ -105,6 +109,8 @@ while True:
 
                 except CloudFlare.exceptions.CloudFlareAPIError as e:
                     exit('/zones/dns_records.get %d %s - api call failed' % (e, e))
-
+            # here we save the current IP to redis, for the next check.
+            r.set('ip', ip)
+            print("IP Saved to Redis!")
     # Waits for 60 seconds until it checks if the IP was changed again. Respect rate limiting and keep this number as high as possible.
     time.sleep(60)
