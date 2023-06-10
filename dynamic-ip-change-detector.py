@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import redis
 import sys
 import ipaddress
+import urllib.request
 load_dotenv(dotenv_path='config.env')
 discord_webhook = os.environ['DISCORD_WEBHOOK']
 
@@ -45,7 +46,7 @@ def webhook_ERROR(content, url):
     webhook.add_embed(embed)
     response = webhook.execute()
 
-
+success = True
 currentip = []
 
 while True:
@@ -58,7 +59,16 @@ while True:
            'Accept-Language': 'en-US,en;q=0.8',
            'Connection': 'keep-alive'}
     request = Request(endpoint, headers=hdr)
-    data = urlopen(request).read()
+    #data = urlopen(request).read()
+    data = None
+    while True:
+        try:
+            data = urlopen(request).read()
+            break  # Break out of the loop if the request was successful
+        except urllib.error.URLError:
+            print("Internet connection error. Retrying in 5 seconds...")
+            time.sleep(5)  # Wait for 5 seconds before retrying
+
     ip = data.decode().strip()
     count = 0
     print(ip)
@@ -108,9 +118,12 @@ while True:
                                         f"**Updated**: `{dns_records['name']}`", discord_webhook)
                                     print(
                                         "NEW: " + dns_records['name'] + " " + dns_records['type'] + " " + data_record['content'])
+                                    if success != False: 
+                                        success=True
                                 except CloudFlare.exceptions.CloudFlareAPIError as e:
                                     # send failure message to discord
                                     webhook_ERROR(f"`{e, e}`", discord_webhook)
+                                    success = False
 
                 except CloudFlare.exceptions.CloudFlareAPIError as e:
                     exit('/zones/dns_records.get %d %s - api call failed' % (e, e))
@@ -123,8 +136,11 @@ while True:
                 print("Invalid IP Address, we will not save this to redis. Instead we will save 1.1.1.1")
                 #we do this so that next time the script runs, it'll be forced to update the IP address. If it is still invalid when it tries again, CF will reject it if it's not a valid IP. 
                 IPRedis = "1.1.1.1"
-            # here we save the current IP to redis, for the next check.
-            r.set('ip', IPRedis)
-            print("IP Saved to Redis!")
+            
+            
+            if success == True: 
+                # here we save the current IP to redis, for the next check.
+                r.set('ip', IPRedis)
+                print("IP Saved to Redis!")
     # Waits for 60 seconds until it checks if the IP was changed again. Respect rate limiting and keep this number as high as possible.
     time.sleep(60)
