@@ -46,7 +46,7 @@ def webhook_ERROR(content, url):
     webhook.add_embed(embed)
     response = webhook.execute()
 
-success = True
+success = False
 currentip = []
 
 while True:
@@ -118,8 +118,8 @@ while True:
                                         f"**Updated**: `{dns_records['name']}`", discord_webhook)
                                     print(
                                         "NEW: " + dns_records['name'] + " " + dns_records['type'] + " " + data_record['content'])
-                                    if success != False: 
-                                        success=True
+                                    #if success != False: 
+                                    success=True
                                 except CloudFlare.exceptions.CloudFlareAPIError as e:
                                     # send failure message to discord
                                     webhook_ERROR(f"`{e, e}`", discord_webhook)
